@@ -1,0 +1,15 @@
+{
+  "py/object": "__main__.Bootstrap.Module",
+  "name": "proxy",
+  "external": true,
+  "root_directory_name": "proxy",
+  "docker_compose_file": "dockercompose.yml",
+  "commands": [
+    {
+      "py/object": "__main__.Bootstrap.Module.Command",
+      "on": "after-command-exec",
+      "container": "nginx",
+      "command": "/bin/ash -c 'nginx -t && nginx -s reload'"
+    }
+  ]
+}

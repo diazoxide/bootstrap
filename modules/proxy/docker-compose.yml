@@ -1,0 +1,21 @@
+version: "3.6"
+services:
+  nginx:
+    restart: always
+    build: ./
+    volumes:
+      - ${root_dir}/nginx/conf.d/:/etc/nginx/conf.d/
+      - ${root_dir}/nginx/certificates/:/etc/nginx/certificates/
+      - ${root_dir}/nginx/letsencrypt/:/etc/letsencrypt/
+      - ${root_dir}/nginx/letsencrypt-lib:/var/lib/letsencrypt
+      - /etc/localtime:/etc/localtime
+      - /etc/timezone:/etc/timezone
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - nginx-network
+networks:
+  nginx-network:
+    external: false
+    name: nginx-network
