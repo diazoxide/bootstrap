@@ -85,6 +85,18 @@ class Bootstrap:
     def get_stack_name(self, module: Module, env: str) -> str:
         return '{0}-{1}-{2}'.format(self.name, env, module.name)
 
+    def down_module(self, module: Module | str, env: str | None = None):
+        module = self.get_module(module)
+        env = env or self.default_env
+        os.chdir(self.get_module_dir(module))
+        command = [
+            'docker-compose',
+            '-p',
+            self.get_stack_name(module, env),
+            'down'
+        ]
+        subprocess.run(command, env=self.get_module_env_variables(module, env))
+
     def up_module(self, module: Module | str, rebuild: bool = False, remote: bool = False, env: str | None = None):
         module = self.get_module(module)
         env = env or self.default_env
@@ -102,7 +114,14 @@ class Bootstrap:
         res = subprocess.run(command, env=self.get_module_env_variables(module, env))
 
         if res.returncode == 0:
-            self.exec_module_commands(module, 'up', remote, env)
+            print(module.name + ': Run up scripts...')
+            self.exec_module_commands(
+                module,
+                on='up',
+                remote=remote,
+                env=env,
+                auto_scripts=True
+            )
 
     def get_module(self, module: str | Module) -> Module:
         if isinstance(module, Bootstrap.Module):
@@ -114,23 +133,26 @@ class Bootstrap:
 
         raise Exception('Module ' + module + ' not found.')
 
-    def exec_module_commands(self, module: Module | str, on: str, remote: bool, env: str):
+    def exec_module_commands(self, module: Module | str, on: str, remote: bool, env: str, auto_scripts: bool):
         module = self.get_module(module)
-
         for command in module.commands:
             if command.on == on:
-                self.exec_module_command(module, command, remote, env)
+                self.exec_module_command(module, command, remote, env, auto_scripts)
 
-    def exec_module_command(self, module: Module | str, command: Module.Command, remote: bool, env: str):
-
+    def exec_module_command(
+            self,
+            module: Module | str,
+            command: Module.Command,
+            remote: bool,
+            env: str,
+            auto_scripts: bool
+    ):
         module = self.get_module(module)
-
         command_list = [command.command] if isinstance(command.command, str) else command.command
 
         for single_command in command_list:
             must_exec = False
             condition = [command.condition] if isinstance(command.condition, str) else command.condition
-
             if not condition:
                 must_exec = True
             else:
@@ -141,8 +163,8 @@ class Bootstrap:
 
             if must_exec:
                 self.exec(command.module or module, command.container, single_command, env)
-
-        self.exec_module_commands(module, 'after-command-exec', remote, env)
+                if auto_scripts:
+                    self.exec_module_commands(command.module or module, 'after-command-exec', remote, env, False)
 
     def up(self, rebuild: bool | str = False, env: str | None = None, remote: bool | str = False):
         rebuild = True if rebuild == 'true' or rebuild else False
@@ -150,6 +172,10 @@ class Bootstrap:
         env = env or self.default_env
         for module in self.modules:
             self.up_module(module, rebuild, remote, env)
+
+    def down(self, env: str | None = None):
+        for module in self.modules:
+            self.down_module(module, env)
 
     def get_service_name(self, module: Module, env: str) -> str:
         return self.name + '-' + env + '-' + module.name
@@ -186,6 +212,10 @@ class Bootstrap:
             raise Exception('Bootstrap already inited.')
         _bs = Bootstrap()
         _bs.name = input("Name of bootstrap: ")
+        _bs.default_env = input("Default env(default" + _bs.default_env + "): ") or _bs.default_env
+
+        default_root_directory = '~/' + _bs.name
+        _bs.root_directory = input("Root directory(" + default_root_directory + "):") or default_root_directory
         _bs.modules = []
         _bs.external_modules = []
 
@@ -194,6 +224,7 @@ class Bootstrap:
         f = open("./bs.json", "w")
         f.write(json_data)
         f.close()
+
 
 try:
     bs = Bootstrap.init_from_json()
