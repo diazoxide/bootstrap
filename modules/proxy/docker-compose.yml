@@ -4,10 +4,10 @@ services:
     restart: always
     build: ./
     volumes:
-      - ${root_dir}/nginx/conf.d/:/etc/nginx/conf.d/
-      - ${root_dir}/nginx/certificates/:/etc/nginx/certificates/
-      - ${root_dir}/nginx/letsencrypt/:/etc/letsencrypt/
-      - ${root_dir}/nginx/letsencrypt-lib:/var/lib/letsencrypt
+      - ${BS_ROOT_DIR}/nginx/conf.d/:/etc/nginx/conf.d/
+      - ${BS_ROOT_DIR}/nginx/certificates/:/etc/nginx/certificates/
+      - ${BS_ROOT_DIR}/nginx/letsencrypt/:/etc/letsencrypt/
+      - ${BS_ROOT_DIR}/nginx/letsencrypt-lib:/var/lib/letsencrypt
       - /etc/localtime:/etc/localtime
       - /etc/timezone:/etc/timezone
     ports:

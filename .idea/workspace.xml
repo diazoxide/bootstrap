@@ -4,19 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c9736064-0075-4658-9f17-435ad184763f" name="Changes" comment="Initial">
-      <change afterPath="$PROJECT_DIR$/modules/portainer/docker-compose.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/modules/portainer/env/local.env" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/modules/portainer/env/prod.env" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/modules/portainer/env/staging.env" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/modules/proxy/Dockerfile" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/modules/proxy/bs-module.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/modules/proxy/docker-compose.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/modules/proxy/down-host.sh" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/modules/proxy/nginx.conf" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/modules/proxy/proxy.conf" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/modules/proxy/up-certificate.sh" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/modules/proxy/up-host.sh" afterDir="false" />
+    <list default="true" id="c9736064-0075-4658-9f17-435ad184763f" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Merge_at_10_05_22,_11_51_[Changes]/shelved.patch" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Merge_at_10_05_22,_11_53_[Changes]/shelved.patch" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Merge_at_10_05_22__11_51__Changes_.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Merge_at_10_05_22__11_53__Changes_.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bs.py" beforeDir="false" afterPath="$PROJECT_DIR$/bs.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/proxy/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/modules/proxy/docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -45,9 +42,11 @@
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
-    "project.structure.last.edited": "Modules",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Project",
     "project.structure.proportion": "0.15",
-    "project.structure.side.proportion": "0.2"
+    "project.structure.side.proportion": "0.2",
+    "settings.editor.selected.configurable": "preferences.pluginManager"
   }
 }]]></component>
   <component name="RecentsManager">
@@ -67,6 +66,7 @@
       <workItem from="1652162125238" duration="44000" />
       <workItem from="1652162205168" duration="44000" />
       <workItem from="1652162252565" duration="779000" />
+      <workItem from="1652171025073" duration="12966000" />
     </task>
     <task id="LOCAL-00001" summary="Initial">
       <created>1652165703481</created>
@@ -95,5 +95,9 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Initial" />
     <option name="LAST_COMMIT_MESSAGE" value="Initial" />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
   </component>
 </project>
