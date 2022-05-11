@@ -4,10 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c9736064-0075-4658-9f17-435ad184763f" name="Changes" comment="Add nginx">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    <list default="true" id="c9736064-0075-4658-9f17-435ad184763f" name="Changes" comment="Installation command on Readme.md">
       <change beforePath="$PROJECT_DIR$/Readme.md" beforeDir="false" afterPath="$PROJECT_DIR$/Readme.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/bs.py" beforeDir="false" afterPath="$PROJECT_DIR$/bs.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -83,7 +81,14 @@
       <option name="project" value="LOCAL" />
       <updated>1652244571768</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="Installation command on Readme.md">
+      <created>1652247662399</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1652247662399</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -103,7 +108,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Initial" />
     <MESSAGE value="Add nginx" />
-    <option name="LAST_COMMIT_MESSAGE" value="Add nginx" />
+    <MESSAGE value="Installation command on Readme.md" />
+    <option name="LAST_COMMIT_MESSAGE" value="Installation command on Readme.md" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
