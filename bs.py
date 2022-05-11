@@ -16,8 +16,9 @@ class Bootstrap:
     variables: dict = {}
 
     __modules_directory: str = os.path.abspath('modules')
-    __src_dir: str = os.path.dirname(os.path.abspath(__file__))
+    __src_dir: str = os.path.dirname(os.path.realpath(__file__))
     __external_modules_directory: str = __src_dir + '/modules'
+    __bootstrap_project_dir: str = os.getcwd()
 
     class Console:
         HEADER = '\033[95m'
@@ -131,7 +132,7 @@ class Bootstrap:
         res = subprocess.run(command, env=self.__get_module_env_variables(module, env))
 
         if res.returncode == 0:
-            print(module.name + ': Run up scripts...')
+            Bootstrap.Console.log(module.name.upper() + ': Running up scripts...', Bootstrap.Console.UNDERLINE)
             self.exec_module_commands(
                 module,
                 on='up',
@@ -214,7 +215,7 @@ class Bootstrap:
 
     @staticmethod
     def init_from_json(json_name: str = 'bs.json'):
-        with open('./' + json_name, 'r') as json_file:
+        with open(Bootstrap.__bootstrap_project_dir + '/' + json_name, 'r') as json_file:
             data = json_file.read()
         _bs = jsonpickle.decode(data)
         if isinstance(_bs, Bootstrap):
@@ -237,7 +238,7 @@ class Bootstrap:
         for bs_method in method_list:
             signature = inspect.signature(getattr(Bootstrap, bs_method))
             parameters = [a for a in signature.parameters if a != 'self']
-            log = "    "+Bootstrap.Console.t(bs_method, Bootstrap.Console.OKGREEN) \
+            log = "    " + Bootstrap.Console.t(bs_method, Bootstrap.Console.OKGREEN) \
                   + ": " \
                   + Bootstrap.Console.t(' '.join(parameters), Bootstrap.Console.BOLD)
             Bootstrap.Console.log(log)
@@ -260,7 +261,6 @@ class Bootstrap:
         f = open("./bs.json", "w")
         f.write(json_data)
         f.close()
-
 
 try:
     bs = Bootstrap.init_from_json()
