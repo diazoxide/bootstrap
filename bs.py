@@ -116,7 +116,7 @@ class Bootstrap:
         ]
         subprocess.run(command, env=self.__get_module_env_variables(module, env))
 
-    def up_module(self, module: Module | str, rebuild: bool = False, remote: bool = False, env: str | None = None):
+    def up_module(self, module: Module | str, env: str | None = None, rebuild: bool = False, remote: bool = False):
         module = self.__get_module(module)
         env = env or self.default_env
         os.chdir(self.__get_module_dir(module))
