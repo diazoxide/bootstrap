@@ -1,4 +1,5 @@
-#!/usr/bin/python3
+#!/usr/bin/python3.10
+
 import inspect
 import os
 import shlex
