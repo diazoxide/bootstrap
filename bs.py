@@ -1,3 +1,5 @@
+#!/usr/bin/python
+import inspect
 import os
 import shlex
 import subprocess
@@ -17,6 +19,25 @@ class Bootstrap:
     __src_dir: str = os.path.dirname(os.path.abspath(__file__))
     __external_modules_directory: str = __src_dir + '/modules'
 
+    class Console:
+        HEADER = '\033[95m'
+        OKBLUE = '\033[94m'
+        OKCYAN = '\033[96m'
+        OKGREEN = '\033[92m'
+        WARNING = '\033[93m'
+        FAIL = '\033[91m'
+        ENDC = '\033[0m'
+        BOLD = '\033[1m'
+        UNDERLINE = '\033[4m'
+
+        @staticmethod
+        def t(log, decoration: str):
+            return decoration + log + Bootstrap.Console.ENDC
+
+        @staticmethod
+        def log(log, decoration: str | None = None):
+            print(Bootstrap.Console.t(log, decoration or Bootstrap.Console.HEADER))
+
     class Module:
         name: str
         root_directory_name: str | None = None
@@ -34,7 +55,7 @@ class Bootstrap:
 
     def prepare(self):
         for external_module in self.external_modules:
-            module_dir = self.get_module_dir(external_module, external=True)
+            module_dir = self.__get_module_dir(external_module, external=True)
             with open(module_dir + '/bs-module.json', 'r') as module_json_file:
                 module_json = module_json_file.read()
             module = jsonpickle.decode(module_json)
@@ -43,29 +64,25 @@ class Bootstrap:
                 module
             )
 
-    def add_module(self, module: Module):
-        self.modules.append(module)
-        module.bootstrap = self
-        return self
-
-    def get_module_root_dir(self, module: Module | str) -> str:
-        module = self.get_module(module)
+    def __get_module_root_dir(self, module: Module | str) -> str:
+        module = self.__get_module(module)
         return self.root_directory + '/' + self.default_env + '/' + (module.root_directory_name or module.name)
 
-    def get_module_dir(self, module: Module | str, external: bool = False) -> str:
+    def __get_module_dir(self, module: Module | str, external: bool = False) -> str:
         module_name = module.name if isinstance(module, Bootstrap.Module) else module
         if external or isinstance(module, Bootstrap.Module) and module.external:
             return self.__external_modules_directory + '/' + module_name
         return self.__modules_directory + '/' + module_name
 
-    def get_module_env_variables(self, module: Module | str, env: str) -> dict:
-        module = self.get_module(module)
+    def __get_module_env_variables(self, module: Module | str, env: str) -> dict:
+        module = self.__get_module(module)
 
         variables = os.environ.copy()
-        variables['BS_ROOT_DIR'] = self.get_module_root_dir(module)
+        variables['BS_ROOT_DIR'] = self.__get_module_root_dir(module)
         variables['BS_ENV'] = env
         for _module in self.modules:
-            variables['BS_' + _module.name.upper().replace('-', '_') + "_SERVICE"] = self.get_service_name(_module, env)
+            variables['BS_' + _module.name.upper().replace('-', '_') + "_SERVICE"] = self.__get_service_name(_module,
+                                                                                                             env)
 
         try:
             bootstrap_variables = self.variables[env]
@@ -82,36 +99,36 @@ class Bootstrap:
 
         return variables
 
-    def get_stack_name(self, module: Module, env: str) -> str:
+    def __get_stack_name(self, module: Module, env: str) -> str:
         return '{0}-{1}-{2}'.format(self.name, env, module.name)
 
     def down_module(self, module: Module | str, env: str | None = None):
-        module = self.get_module(module)
+        module = self.__get_module(module)
         env = env or self.default_env
-        os.chdir(self.get_module_dir(module))
+        os.chdir(self.__get_module_dir(module))
         command = [
             'docker-compose',
             '-p',
-            self.get_stack_name(module, env),
+            self.__get_stack_name(module, env),
             'down'
         ]
-        subprocess.run(command, env=self.get_module_env_variables(module, env))
+        subprocess.run(command, env=self.__get_module_env_variables(module, env))
 
     def up_module(self, module: Module | str, rebuild: bool = False, remote: bool = False, env: str | None = None):
-        module = self.get_module(module)
+        module = self.__get_module(module)
         env = env or self.default_env
-        os.chdir(self.get_module_dir(module))
+        os.chdir(self.__get_module_dir(module))
         command = [
             'docker-compose',
             '-p',
-            self.get_stack_name(module, env),
+            self.__get_stack_name(module, env),
             'up', '-d', '--force-recreate'
         ]
 
         if rebuild:
             command.append('--build')
 
-        res = subprocess.run(command, env=self.get_module_env_variables(module, env))
+        res = subprocess.run(command, env=self.__get_module_env_variables(module, env))
 
         if res.returncode == 0:
             print(module.name + ': Run up scripts...')
@@ -123,7 +140,7 @@ class Bootstrap:
                 auto_scripts=True
             )
 
-    def get_module(self, module: str | Module) -> Module:
+    def __get_module(self, module: str | Module) -> Module:
         if isinstance(module, Bootstrap.Module):
             return module
 
@@ -134,7 +151,7 @@ class Bootstrap:
         raise Exception('Module ' + module + ' not found.')
 
     def exec_module_commands(self, module: Module | str, on: str, remote: bool, env: str, auto_scripts: bool):
-        module = self.get_module(module)
+        module = self.__get_module(module)
         for command in module.commands:
             if command.on == on:
                 self.exec_module_command(module, command, remote, env, auto_scripts)
@@ -147,7 +164,7 @@ class Bootstrap:
             env: str,
             auto_scripts: bool
     ):
-        module = self.get_module(module)
+        module = self.__get_module(module)
         command_list = [command.command] if isinstance(command.command, str) else command.command
 
         for single_command in command_list:
@@ -166,7 +183,7 @@ class Bootstrap:
                 if auto_scripts:
                     self.exec_module_commands(command.module or module, 'after-command-exec', remote, env, False)
 
-    def up(self, rebuild: bool | str = False, env: str | None = None, remote: bool | str = False):
+    def up(self, env: str | None = None, rebuild: bool | str = False, remote: bool | str = False):
         rebuild = True if rebuild == 'true' or rebuild else False
         remote = True if remote == 'true' or remote else False
         env = env or self.default_env
@@ -177,19 +194,19 @@ class Bootstrap:
         for module in self.modules:
             self.down_module(module, env)
 
-    def get_service_name(self, module: Module, env: str) -> str:
+    def __get_service_name(self, module: Module, env: str) -> str:
         return self.name + '-' + env + '-' + module.name
 
-    def get_container_name(self, module: Module, container: str, env: str) -> str:
-        return self.get_service_name(module, env) + '-' + container + '-1'
+    def __get_container_name(self, module: Module, container: str, env: str) -> str:
+        return self.__get_service_name(module, env) + '-' + container + '-1'
 
     def exec(self, module: Module | str, container: str, command: str, env: str | None = None):
         env = env or self.default_env
-        module = self.get_module(module)
-        os.chdir(self.get_module_dir(module))
-        variables = self.get_module_env_variables(module, env)
+        module = self.__get_module(module)
+        os.chdir(self.__get_module_dir(module))
+        variables = self.__get_module_env_variables(module, env)
 
-        _command_str = ('docker compose -p' + self.get_stack_name(module, env) + ' exec ' + container + ' ' + command) \
+        _command_str = ('docker compose -p' + self.__get_stack_name(module, env) + ' exec ' + container + ' ' + command) \
             .format(**variables)
         _command = shlex.split(_command_str)
 
@@ -205,6 +222,25 @@ class Bootstrap:
             return _bs
 
         raise Exception('Invalid Bootstrap json file')
+
+    @staticmethod
+    def help():
+        method_list = [
+            func for func in dir(Bootstrap)
+            if callable(getattr(Bootstrap, func))
+               and not func.startswith("_")
+               and not inspect.isclass(getattr(Bootstrap, func))
+        ]
+
+        Bootstrap.Console.log('Bootstrap methods\r\n')
+
+        for bs_method in method_list:
+            signature = inspect.signature(getattr(Bootstrap, bs_method))
+            parameters = [a for a in signature.parameters if a != 'self']
+            log = "    "+Bootstrap.Console.t(bs_method, Bootstrap.Console.OKGREEN) \
+                  + ": " \
+                  + Bootstrap.Console.t(' '.join(parameters), Bootstrap.Console.BOLD)
+            Bootstrap.Console.log(log)
 
     @staticmethod
     def setup():
@@ -231,7 +267,7 @@ try:
 except Exception:
     bs = Bootstrap
 
-method = sys.argv[1]
+method = sys.argv[1] if 1 < len(sys.argv) else 'help'
 args_obj = {}
 
 for arg in sys.argv[2:]:
