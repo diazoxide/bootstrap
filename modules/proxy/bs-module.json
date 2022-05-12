@@ -8,7 +8,7 @@
     {
       "py/object": "__main__.Bootstrap.Module.Command",
       "on": "after-command-exec",
-      "container": "nginx",
+      "service": "nginx",
       "command": [
         "/bin/ash -c 'nginx -t && nginx -s reload'"
       ]

@@ -52,7 +52,7 @@ class Bootstrap:
             on: str = 'up'
             condition: str | list = []
             module: str | None = None
-            container: str
+            service: str
             command: str | list
 
     def prepare(self):
@@ -162,9 +162,9 @@ class Bootstrap:
             self,
             module: Module | str,
             command: Module.Command,
-            remote: bool,
-            env: str,
-            auto_scripts: bool
+            remote: bool = False,
+            env: str | None = None,
+            auto_scripts: bool = True
     ):
         module = self.__get_module(module)
         command_list = [command.command] if isinstance(command.command, str) else command.command
@@ -181,7 +181,19 @@ class Bootstrap:
                     must_exec = True
 
             if must_exec:
-                self.exec(command.module or module, command.container, single_command, env)
+                self.assert_service_running(
+                    module=command.module or module,
+                    env=env,
+                    service=command.service,
+                    remote=True
+                )
+                self.exec(
+                    module=command.module or module,
+                    service=command.service,
+                    command=single_command,
+                    env=env,
+                    remote=remote
+                )
                 if auto_scripts:
                     self.exec_module_commands(command.module or module, 'after-command-exec', remote, env, False)
 
@@ -190,7 +202,7 @@ class Bootstrap:
         remote = True if remote == 'true' or remote else False
         env = env or self.default_env
         for module in self.modules:
-            self.up_module(module, rebuild, remote, env)
+            self.up_module(module, rebuild=rebuild, remote=remote, env=env)
 
     def down(self, env: str | None = None):
         for module in self.modules:
@@ -199,17 +211,30 @@ class Bootstrap:
     def __get_service_name(self, module: Module, env: str) -> str:
         return self.name + '-' + env + '-' + module.name
 
-    def __get_container_name(self, module: Module, container: str, env: str) -> str:
-        return self.__get_service_name(module, env) + '-' + container + '-1'
+    def assert_service_running(self, module: Module | str, env: str | None = None, service: str | None = None, remote: bool = False):
+        module = self.__get_module(module)
+        env = env or self.default_env
 
-    def exec(self, module: Module | str, container: str, command: str, env: str | None = None):
+        res = self.exec(module=module, service=service, env=env, command="/bin/sh -c 'echo OK'", remote=remote)
+        if res.returncode != 0:
+            Bootstrap.Console.log(service.upper()+' is not running.', Bootstrap.Console.WARNING)
+            answer = input('Run '+module.name.upper()+' to continue? (y|yes)').lower()
+            if answer == 'yes' or answer == 'y':
+                self.up_module(module=module, env=env, remote=remote)
+
+    def exec(self, module: Module | str, service: str, command: str, env: str | None = None, remote: bool = False):
         env = env or self.default_env
         module = self.__get_module(module)
         os.chdir(self.__get_module_dir(module))
         variables = self.__get_module_env_variables(module, env)
 
-        _command_str = ('docker compose -p' + self.__get_stack_name(module, env) + ' exec ' + container + ' ' + command) \
-            .format(**variables)
+        _command_str = (
+            'docker compose -p{0} exec {1} {2}'.format(
+                self.__get_stack_name(module, env),
+                service,
+                command
+            )
+        ).format(**variables)
         _command = shlex.split(_command_str)
 
         return subprocess.run(_command, env=variables)
@@ -229,9 +254,9 @@ class Bootstrap:
     def help():
         method_list = [
             func for func in dir(Bootstrap)
-            if callable(getattr(Bootstrap, func))
-               and not func.startswith("_")
-               and not inspect.isclass(getattr(Bootstrap, func))
+            if callable(getattr(Bootstrap, func)) and not
+            func.startswith("_") and not
+               inspect.isclass(getattr(Bootstrap, func))
         ]
 
         Bootstrap.Console.log('Bootstrap methods\r\n')
@@ -262,6 +287,7 @@ class Bootstrap:
         f = open("./bs.json", "w")
         f.write(json_data)
         f.close()
+
 
 try:
     bs = Bootstrap.init_from_json()
