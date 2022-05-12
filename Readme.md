@@ -1,4 +1,7 @@
 # Installation
+```
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/diazoxide/bootstrap/HEAD/bs.install.sh)"
+```
 
 ```shell
 TD=/usr/local/lib; TF="$TD/bs.zip"; TSD="$TD/bs";\
