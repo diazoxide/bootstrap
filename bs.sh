@@ -1,3 +1,3 @@
 #!/bin/sh
 
-python3 bs.py "$@"
+python3 ./bs.py "$@"
