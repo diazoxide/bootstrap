@@ -9,7 +9,7 @@ mkdir -p $INSTALL_DIR
 
 cd $INSTALL_DIR && \
 git clone https://github.com/diazoxide/bootstrap.git . \
-&& python3 -m pip install --upgrade pip
+&& python3 -m pip install --upgrade pip \
 && pip3 install -r requirements.txt \
 && chmod +x "${INSTALL_DIR}/bs.sh" \
 && ln -s "${INSTALL_DIR}/bs.sh" /usr/local/bin/bs \
