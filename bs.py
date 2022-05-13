@@ -83,7 +83,7 @@ class Bootstrap:
         variables['BS_ROOT_DIR'] = self.__get_module_root_dir(module)
         variables['BS_ENV'] = env
         for _module in self.modules:
-            variables['BS_' + _module.name.upper().replace('-', '_') + "_SERVICE"] = self.__get_service_name(_module,
+            variables['BS_' + _module.name.upper().replace('-', '_') + "_MODULE"] = self.__get_service_name(_module,
                                                                                                              env)
 
         try:
