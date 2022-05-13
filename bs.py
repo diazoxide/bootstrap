@@ -15,7 +15,7 @@ class Bootstrap:
     default_env: str = 'dev'
     external_modules: list = []
     variables: dict = {}
-
+    __version: str = '1.0.1'
     __modules_directory: str = os.path.abspath('modules')
     __src_dir: str = os.path.dirname(os.path.realpath(__file__))
     __external_modules_directory: str = __src_dir + '/modules'
@@ -83,8 +83,10 @@ class Bootstrap:
         variables['BS_ROOT_DIR'] = self.__get_module_root_dir(module)
         variables['BS_ENV'] = env
         for _module in self.modules:
-            variables['BS_' + _module.name.upper().replace('-', '_') + "_MODULE"] = self.__get_service_name(_module,
-                                                                                                             env)
+            variables['BS_' + _module.name.upper().replace('-', '_') + "_MODULE"] = self.__get_service_name(
+                _module,
+                env
+            )
 
         try:
             bootstrap_variables = self.variables[env]
@@ -211,14 +213,15 @@ class Bootstrap:
     def __get_service_name(self, module: Module, env: str) -> str:
         return self.name + '-' + env + '-' + module.name
 
-    def assert_service_running(self, module: Module | str, env: str | None = None, service: str | None = None, remote: bool = False):
+    def assert_service_running(self, module: Module | str, env: str | None = None, service: str | None = None,
+                               remote: bool = False):
         module = self.__get_module(module)
         env = env or self.default_env
 
         res = self.exec(module=module, service=service, env=env, command="/bin/sh -c 'echo OK'", remote=remote)
         if res.returncode != 0:
-            Bootstrap.Console.log(service.upper()+' is not running.', Bootstrap.Console.WARNING)
-            answer = input('Run '+module.name.upper()+' to continue? (y|yes)').lower()
+            Bootstrap.Console.log(service.upper() + ' is not running.', Bootstrap.Console.WARNING)
+            answer = input('Run ' + module.name.upper() + ' to continue? (y|yes)').lower()
             if answer == 'yes' or answer == 'y':
                 self.up_module(module=module, env=env, remote=remote)
 
@@ -238,6 +241,16 @@ class Bootstrap:
         _command = shlex.split(_command_str)
 
         return subprocess.run(_command, env=variables)
+
+    @staticmethod
+    def version():
+        Bootstrap.Console.log('Diazoxide Bootstrap', Bootstrap.Console.OKCYAN)
+        Bootstrap.Console.log('Version: ' + Bootstrap.__version, Bootstrap.Console.OKGREEN)
+
+    @staticmethod
+    def branding():
+        with open(Bootstrap.__src_dir + '/branding', 'r') as branding_txt:
+            Bootstrap.Console.log(branding_txt.read(), Bootstrap.Console.WARNING)
 
     @staticmethod
     def init_from_json(json_name: str = 'bs.json'):
@@ -289,6 +302,7 @@ class Bootstrap:
         f.close()
 
 
+Bootstrap.branding()
 try:
     bs = Bootstrap.init_from_json()
 except Exception:
