@@ -177,7 +177,8 @@ class Bootstrap:
     def up_module(self, module: Module | str, env: str | None = None, rebuild: bool = False, remote: bool = False):
         module = self.__get_module(module)
         env = env or self.default_env
-        variables = self.__get_module_env_variables(module, env=env, remote=remote)
+        variables = self.__get_module_env_variables(module=module, env=env, remote=remote)
+
         os.chdir(self.__get_module_dir(module))
         command = ['docker-compose']
 
@@ -248,7 +249,7 @@ class Bootstrap:
                     module=command.module or module,
                     env=env,
                     service=command.service,
-                    remote=True
+                    remote=remote
                 )
                 self.exec(
                     module=command.module or module,
@@ -296,6 +297,7 @@ class Bootstrap:
         os.chdir(self.__get_module_dir(module))
         variables = self.__get_module_env_variables(module=module, env=env, remote=remote)
         remote_param = ''
+
         if remote:
             remote_param = '-H ' + self.__get_module_remote_server_uri(module, env)
 
