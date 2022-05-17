@@ -1,3 +1,5 @@
 #!/bin/sh
 
-python3 /usr/local/lib/bs/bs.py "$@"
+#TODO change back
+python3 ~/PycharmProjects/bootstrap/bs.py "$@"
+#python3 /usr/local/lib/bs/bs.py "$@"

@@ -10,15 +10,21 @@ import jsonpickle
 
 class Bootstrap:
     name: str
-    root_directory: str = '~/bs-project'
+    root_dir: str | dict = '~/bs-project'
+    ssh_keys_dir: str | dict | None = '~/.ssh'
+
+    remote_root_dir: str = root_dir
+    remote_server_uri: str | dict | None = None
+    remote_ssh_keys_dir: str | dict | None = '/root/.ssh'
+
     modules: list = []
     default_env: str = 'dev'
     external_modules: list = []
     variables: dict = {}
-    __version: str = '1.0.1'
-    __modules_directory: str = os.path.abspath('modules')
+    __version: str = '1.0.2'
+    __modules_dir: str = os.path.abspath('modules')
     __src_dir: str = os.path.dirname(os.path.realpath(__file__))
-    __external_modules_directory: str = __src_dir + '/modules'
+    __external_modules_dir: str = __src_dir + '/modules'
     __bootstrap_project_dir: str = os.getcwd()
 
     class Console:
@@ -42,7 +48,15 @@ class Bootstrap:
 
     class Module:
         name: str
-        root_directory_name: str | None = None
+
+        root_dir: str | dict | None = None
+        ssh_keys_dir: str | dict | None = None
+
+        remote_root_dir: str | None = root_dir
+        remote_server_uri: str | dict | None = None
+        remote_ssh_keys_dir: str | dict | None = None
+
+        root_dir_name: str | None = None
         docker_compose_file: str = 'dockercompose.yml'
         external: bool = False
         commands: list = []
@@ -66,28 +80,47 @@ class Bootstrap:
                 module
             )
 
-    def __get_module_root_dir(self, module: Module | str) -> str:
+    def __get_module_root_dir(self, module: Module | str, env: str, remote: bool) -> str:
         module = self.__get_module(module)
-        return self.root_directory + '/' + self.default_env + '/' + (module.root_directory_name or module.name)
+        root_dir = self.__get_root_dir(module=module, env=env, remote=remote)
+
+        return \
+            root_dir + '/' \
+            + env + '/' \
+            + (module.root_dir_name or module.name)
 
     def __get_module_dir(self, module: Module | str, external: bool = False) -> str:
         module_name = module.name if isinstance(module, Bootstrap.Module) else module
         if external or isinstance(module, Bootstrap.Module) and module.external:
-            return self.__external_modules_directory + '/' + module_name
-        return self.__modules_directory + '/' + module_name
+            return self.__external_modules_dir + '/' + module_name
+        return self.__modules_dir + '/' + module_name
 
-    def __get_module_env_variables(self, module: Module | str, env: str) -> dict:
+    def __get_module_ssh_keys_dir(self, module: Module | str, env: str, remote: bool) -> str:
+        if remote:
+            keys_dir = module.remote_ssh_keys_dir if module.remote_ssh_keys_dir is not None else self.remote_ssh_keys_dir
+        else:
+            keys_dir = module.ssh_keys_dir if module.ssh_keys_dir is not None else self.ssh_keys_dir
+        return self.__get_property_for_env(keys_dir, env)
+
+    def __get_root_dir(self, module: Module | str, env: str, remote: bool) -> str:
+        if remote:
+            keys_dir = module.remote_root_dir if module.remote_root_dir is not None else self.remote_root_dir
+        else:
+            keys_dir = module.root_dir if module.root_dir is not None else self.root_dir
+        return self.__get_property_for_env(keys_dir, env)
+
+    def __get_module_env_variables(self, module: Module | str, env: str, remote: bool) -> dict:
         module = self.__get_module(module)
 
         variables = os.environ.copy()
-        variables['BS_ROOT_DIR'] = self.__get_module_root_dir(module)
+        variables['BS_ROOT_DIR'] = self.__get_module_root_dir(module=module, env=env, remote=remote)
+        variables['BS_SSH_KEYS_DIR'] = self.__get_module_ssh_keys_dir(module=module, env=env, remote=remote)
         variables['BS_ENV'] = env
         for _module in self.modules:
             variables['BS_' + _module.name.upper().replace('-', '_') + "_MODULE"] = self.__get_service_name(
                 _module,
                 env
             )
-
         try:
             bootstrap_variables = self.variables[env]
         except KeyError:
@@ -106,33 +139,61 @@ class Bootstrap:
     def __get_stack_name(self, module: Module, env: str) -> str:
         return '{0}-{1}-{2}'.format(self.name, env, module.name)
 
-    def down_module(self, module: Module | str, env: str | None = None):
+    def down_module(self, module: Module | str, env: str | None = None, remote: bool = False):
         module = self.__get_module(module)
         env = env or self.default_env
+        variables = self.__get_module_env_variables(module=module, env=env, remote=remote)
         os.chdir(self.__get_module_dir(module))
         command = [
             'docker-compose',
+        ]
+
+        if remote:
+            command += ['-H', self.__get_module_remote_server_uri(module, env)]
+
+        command += [
             '-p',
             self.__get_stack_name(module, env),
             'down'
         ]
-        subprocess.run(command, env=self.__get_module_env_variables(module, env))
+        subprocess.run(command, env=variables)
+
+    @staticmethod
+    def __get_property_for_env(var: str | dict | None, env: str):
+        if type(var) is dict:
+            return var[env] if env in var else None
+        return var
+
+    def __get_module_remote_server_uri(self, module: Module, env: str):
+        uri = module.remote_server_uri if module.remote_server_uri is not None else self.remote_server_uri
+
+        uri = self.__get_property_for_env(uri, env)
+
+        if uri is None:
+            raise Exception('Remote server uri is required')
+
+        return uri
 
     def up_module(self, module: Module | str, env: str | None = None, rebuild: bool = False, remote: bool = False):
         module = self.__get_module(module)
         env = env or self.default_env
+        variables = self.__get_module_env_variables(module, env=env, remote=remote)
         os.chdir(self.__get_module_dir(module))
-        command = [
-            'docker-compose',
+        command = ['docker-compose']
+
+        if remote:
+            command += ['-H', self.__get_module_remote_server_uri(module, env)]
+
+        command += [
             '-p',
             self.__get_stack_name(module, env),
-            'up', '-d', '--force-recreate'
+            'up', '-d', '--force-recreate', '--wait'
         ]
 
         if rebuild:
             command.append('--build')
 
-        res = subprocess.run(command, env=self.__get_module_env_variables(module, env))
+        res = subprocess.run(command, env=variables)
 
         if res.returncode == 0:
             Bootstrap.Console.log(module.name.upper() + ': Running up scripts...', Bootstrap.Console.UNDERLINE)
@@ -204,17 +265,21 @@ class Bootstrap:
         remote = True if remote == 'true' or remote else False
         env = env or self.default_env
         for module in self.modules:
-            self.up_module(module, rebuild=rebuild, remote=remote, env=env)
+            self.up_module(module=module, rebuild=rebuild, remote=remote, env=env)
 
-    def down(self, env: str | None = None):
+    def down(self, env: str | None = None, remote: bool | str = False):
         for module in self.modules:
-            self.down_module(module, env)
+            self.down_module(module=module, env=env, remote=remote)
 
     def __get_service_name(self, module: Module, env: str) -> str:
         return self.name + '-' + env + '-' + module.name
 
-    def assert_service_running(self, module: Module | str, env: str | None = None, service: str | None = None,
-                               remote: bool = False):
+    def assert_service_running(
+            self, module: Module | str,
+            env: str | None = None,
+            service: str | None = None,
+            remote: bool = False
+    ):
         module = self.__get_module(module)
         env = env or self.default_env
 
@@ -229,11 +294,15 @@ class Bootstrap:
         env = env or self.default_env
         module = self.__get_module(module)
         os.chdir(self.__get_module_dir(module))
-        variables = self.__get_module_env_variables(module, env)
+        variables = self.__get_module_env_variables(module=module, env=env, remote=remote)
+        remote_param = ''
+        if remote:
+            remote_param = '-H ' + self.__get_module_remote_server_uri(module, env)
 
         _command_str = (
-            'docker compose -p{0} exec {1} {2}'.format(
+            'docker-compose -p{0} {1} exec {2} {3}'.format(
                 self.__get_stack_name(module, env),
+                remote_param,
                 service,
                 command
             )
@@ -268,8 +337,7 @@ class Bootstrap:
         method_list = [
             func for func in dir(Bootstrap)
             if callable(getattr(Bootstrap, func)) and not
-            func.startswith("_") and not
-               inspect.isclass(getattr(Bootstrap, func))
+            func.startswith("_") and not inspect.isclass(getattr(Bootstrap, func))
         ]
 
         Bootstrap.Console.log('Bootstrap methods\r\n')
@@ -290,8 +358,8 @@ class Bootstrap:
         _bs.name = input("Name of bootstrap: ")
         _bs.default_env = input("Default env(default" + _bs.default_env + "): ") or _bs.default_env
 
-        default_root_directory = '~/' + _bs.name
-        _bs.root_directory = input("Root directory(" + default_root_directory + "):") or default_root_directory
+        default_root_dir = '~/' + _bs.name
+        _bs.root_dir = input("Root dir(" + default_root_dir + "):") or default_root_dir
         _bs.modules = []
         _bs.external_modules = []
 
