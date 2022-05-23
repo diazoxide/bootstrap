@@ -154,7 +154,8 @@ class Bootstrap:
         command += [
             '-p',
             self.__get_stack_name(module, env),
-            'down'
+            'down',
+            '--remove-orphans'
         ]
         subprocess.run(command, env=variables)
 
@@ -188,7 +189,7 @@ class Bootstrap:
         command += [
             '-p',
             self.__get_stack_name(module, env),
-            'up', '-d', '--force-recreate', '--wait'
+            'up', '-d', '--force-recreate', '--wait', '--remove-orphans'
         ]
 
         if rebuild:
@@ -216,7 +217,7 @@ class Bootstrap:
 
         raise Exception('Module ' + module + ' not found.')
 
-    def exec_module_commands(self, module: Module | str, on: str, remote: bool, env: str, auto_scripts: bool):
+    def exec_module_commands(self, module: Module | str, on: str, remote: bool, env: str, auto_scripts: bool = True):
         module = self.__get_module(module)
         for command in module.commands:
             if command.on == on:
