@@ -394,12 +394,13 @@ except Exception:
     bs = Bootstrap
 
 method = sys.argv[1] if 1 < len(sys.argv) else 'help'
+method = method.replace('-', '_')
 args_obj = {}
 
 for arg in sys.argv[2:]:
     if '=' in arg:
         sep = arg.find('=')
-        key, value = arg[:sep], arg[sep + 1:]
+        key, value = arg[:sep].replace('-', '_'), arg[sep + 1:]
         args_obj[key] = value
 
 getattr(bs, method)(**args_obj)

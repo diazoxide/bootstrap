@@ -1,9 +1,6 @@
-{
-  "py/object": "__main__.Bootstrap.Module",
-  "name": "portainer",
-  "external": true,
-  "root_directory_name": "portainer",
-  "docker_compose_file": "dockercompose.yml",
-  "commands": [
-  ]
-}
+!Module
+commands: [ ]
+docker_compose_file: dockercompose.yml
+external: true
+name: portainer
+root_directory_name: portainer
