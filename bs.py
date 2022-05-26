@@ -5,10 +5,13 @@ import os
 import shlex
 import subprocess
 import sys
-import jsonpickle
+import yaml
 
 
-class Bootstrap:
+class Bootstrap(yaml.YAMLObject):
+    yaml_loader = yaml.SafeLoader
+    yaml_tag = u'!Bootstrap'
+
     name: str
     root_dir: str | dict = '~/bs-project'
     ssh_keys_dir: str | dict | None = '~/.ssh'
@@ -46,7 +49,9 @@ class Bootstrap:
         def log(log, decoration: str | None = None):
             print(Bootstrap.Console.t(log, decoration or Bootstrap.Console.HEADER))
 
-    class Module:
+    class Module(yaml.YAMLObject):
+        yaml_loader = yaml.SafeLoader
+        yaml_tag = u'!Module'
         name: str
 
         root_dir: str | dict | None = None
@@ -62,19 +67,28 @@ class Bootstrap:
         commands: list = []
         variables: dict = {}
 
-        class Command:
+        class Command(yaml.YAMLObject):
+            yaml_loader = yaml.SafeLoader
+            yaml_tag = u'!Command'
             on: str = 'up'
             condition: str | list = []
             module: str | None = None
             service: str
             command: str | list
 
+    def __yaml(self):
+        serialized = yaml.dump(self)
+        return serialized
+
+    def yaml(self):
+        self.Console.log(self.__yaml())
+
     def prepare(self):
         for external_module in self.external_modules:
             module_dir = self.__get_module_dir(external_module, external=True)
-            with open(module_dir + '/bs-module.json', 'r') as module_json_file:
-                module_json = module_json_file.read()
-            module = jsonpickle.decode(module_json)
+            with open(module_dir + '/bs-module.yaml', 'r') as module_yaml_file:
+                module_yaml = module_yaml_file.read()
+            module = yaml.safe_load(module_yaml)
             self.modules.insert(
                 0,
                 module
@@ -97,7 +111,9 @@ class Bootstrap:
 
     def __get_module_ssh_keys_dir(self, module: Module | str, env: str, remote: bool) -> str:
         if remote:
-            keys_dir = module.remote_ssh_keys_dir if module.remote_ssh_keys_dir is not None else self.remote_ssh_keys_dir
+            keys_dir = module.remote_ssh_keys_dir \
+                if module.remote_ssh_keys_dir is not None \
+                else self.remote_ssh_keys_dir
         else:
             keys_dir = module.ssh_keys_dir if module.ssh_keys_dir is not None else self.ssh_keys_dir
         return self.__get_property_for_env(keys_dir, env)
@@ -325,15 +341,15 @@ class Bootstrap:
             Bootstrap.Console.log(branding_txt.read(), Bootstrap.Console.WARNING)
 
     @staticmethod
-    def init_from_json(json_name: str = 'bs.json'):
-        with open(Bootstrap.__bootstrap_project_dir + '/' + json_name, 'r') as json_file:
-            data = json_file.read()
-        _bs = jsonpickle.decode(data)
+    def init_from_yaml(yaml_name: str = 'bs.yaml'):
+        with open(Bootstrap.__bootstrap_project_dir + '/' + yaml_name, 'r') as yaml_file:
+            data = yaml_file.read()
+        _bs = yaml.safe_load(data)
         if isinstance(_bs, Bootstrap):
             _bs.prepare()
             return _bs
 
-        raise Exception('Invalid Bootstrap json file')
+        raise Exception('Invalid Bootstrap bs.yaml file')
 
     @staticmethod
     def help():
@@ -355,7 +371,7 @@ class Bootstrap:
 
     @staticmethod
     def setup():
-        if os.path.isfile('./bs.json'):
+        if os.path.isfile('./bs.yaml'):
             raise Exception('Bootstrap already inited.')
         _bs = Bootstrap()
         _bs.name = input("Name of bootstrap: ")
@@ -366,16 +382,14 @@ class Bootstrap:
         _bs.modules = []
         _bs.external_modules = []
 
-        json_data = jsonpickle.encode(_bs, indent=4)
-
-        f = open("./bs.json", "w")
-        f.write(json_data)
+        f = open("./bs.yaml", "w")
+        f.write(_bs.__yaml())
         f.close()
 
 
 Bootstrap.branding()
 try:
-    bs = Bootstrap.init_from_json()
+    bs = Bootstrap.init_from_yaml()
 except Exception:
     bs = Bootstrap
 
