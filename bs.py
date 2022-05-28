@@ -191,7 +191,15 @@ class Bootstrap(yaml.YAMLObject):
 
         return uri
 
-    def up_module(self, module: Module | str, env: str | None = None, rebuild: bool = False, remote: bool = False):
+    def up_module(
+            self,
+            module: Module | str,
+            env: str | None = None,
+            rebuild: bool = False | str,
+            remote: bool | str = False
+    ):
+        rebuild = True if rebuild == 'true' or rebuild else False
+        remote = True if remote == 'true' or remote else False
         module = self.__get_module(module)
         env = env or self.default_env
         variables = self.__get_module_env_variables(module=module, env=env, remote=remote)
