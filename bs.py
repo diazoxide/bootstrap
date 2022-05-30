@@ -395,7 +395,7 @@ class Bootstrap(yaml.YAMLObject):
         result = subprocess.run([
             '/bin/sh',
             '-c',
-            'eval "$(curl -fsSL https://raw.githubusercontent.com/diazoxide/bootstrap/HEAD/install.sh)"'
+            'sudo eval "$(curl -fsSL https://raw.githubusercontent.com/diazoxide/bootstrap/HEAD/install.sh)"'
         ], capture_output=False)
 
         if result.returncode == 0:
