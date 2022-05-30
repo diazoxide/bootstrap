@@ -393,8 +393,9 @@ class Bootstrap(yaml.YAMLObject):
     @staticmethod
     def update():
         result = subprocess.run([
-            'eval'
-            '"$(curl -fsSL https://raw.githubusercontent.com/diazoxide/bootstrap/HEAD/install.sh)"'
+            '/bin/sh',
+            '-c',
+            'eval "$(curl -fsSL https://raw.githubusercontent.com/diazoxide/bootstrap/HEAD/install.sh)"'
         ], capture_output=False)
 
         if result.returncode == 0:
