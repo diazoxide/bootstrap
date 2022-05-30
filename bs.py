@@ -396,7 +396,7 @@ class Bootstrap(yaml.YAMLObject):
             'sudo',
             '/bin/sh',
             '-c',
-            '"$(curl -fsSL https://raw.githubusercontent.com/diazoxide/bootstrap/HEAD/install.sh)"'
+            '$(curl -fsSL https://raw.githubusercontent.com/diazoxide/bootstrap/HEAD/install.sh)'
         ], capture_output=False)
 
         if result.returncode == 0:
