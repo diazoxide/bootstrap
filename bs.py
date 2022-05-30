@@ -396,15 +396,15 @@ class Bootstrap(yaml.YAMLObject):
             '/bin/sh',
             '-c',
             'eval "$(curl -fsSL https://raw.githubusercontent.com/diazoxide/bootstrap/HEAD/install.sh)"'
-        ], capture_output=False)
+        ], capture_output=True)
 
         if result.returncode == 0:
             Bootstrap.Console.log('Successfully updated.')
             subprocess.run(['bs', 'version'])
+        elif result.returncode == 128:
+            Bootstrap.Console.log("Permission denied. Run update command with super user.")
         else:
-            Bootstrap.Console.log("Err: " + str(result.returncode))
-
-
+            Bootstrap.Console.log("Update failed.")
     # endregion Public methods
 
     @staticmethod
