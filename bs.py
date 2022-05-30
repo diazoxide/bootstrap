@@ -397,7 +397,7 @@ class Bootstrap(yaml.YAMLObject):
             '/bin/sh',
             '-c',
             '"$(curl -fsSL https://raw.githubusercontent.com/diazoxide/bootstrap/HEAD/install.sh)"'
-        ])
+        ], stdout=subprocess.DEVNULL)
     # endregion Public methods
 
     @staticmethod
