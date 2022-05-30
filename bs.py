@@ -24,7 +24,7 @@ class Bootstrap(yaml.YAMLObject):
     default_env: str = 'dev'
     external_modules: list = []
     variables: dict = {}
-    __version: str = '1.0.5'
+    __version: str = '1.0.6'
     __modules_dir: str = os.path.abspath('modules')
     __src_dir: str = os.path.dirname(os.path.realpath(__file__))
     __external_modules_dir: str = __src_dir + '/modules'
@@ -392,12 +392,20 @@ class Bootstrap(yaml.YAMLObject):
 
     @staticmethod
     def update():
-        subprocess.run([
+        result = subprocess.run([
             'sudo',
             '/bin/sh',
             '-c',
             '"$(curl -fsSL https://raw.githubusercontent.com/diazoxide/bootstrap/HEAD/install.sh)"'
-        ], stdout=subprocess.DEVNULL)
+        ], capture_output=True)
+
+        if result.returncode == 0:
+            Bootstrap.Console.log('Successfully updated.')
+
+        result = subprocess.run([
+            'bs','version'
+        ], capture_output=True)
+
     # endregion Public methods
 
     @staticmethod
