@@ -24,7 +24,7 @@ class Bootstrap(yaml.YAMLObject):
     default_env: str = 'dev'
     external_modules: list = []
     variables: dict = {}
-    __version: str = '1.0.8'
+    __version: str = '1.0.9'
     __modules_dir: str = os.path.abspath('modules')
     __src_dir: str = os.path.dirname(os.path.realpath(__file__))
     __external_modules_dir: str = __src_dir + '/modules'
