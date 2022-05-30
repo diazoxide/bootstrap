@@ -397,7 +397,7 @@ class Bootstrap(yaml.YAMLObject):
             '/bin/sh',
             '-c',
             '"$(curl -fsSL https://raw.githubusercontent.com/diazoxide/bootstrap/HEAD/install.sh)"'
-        ], capture_output=True)
+        ], capture_output=False)
 
         if result.returncode == 0:
             Bootstrap.Console.log('Successfully updated.')
