@@ -402,7 +402,7 @@ class Bootstrap(yaml.YAMLObject):
             Bootstrap.Console.log('Successfully updated.')
             subprocess.run(['bs', 'version'])
         else:
-            Bootstrap.Console.log(result.returncode)
+            Bootstrap.Console.log("Err: " + str(result.returncode))
 
 
     # endregion Public methods
