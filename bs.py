@@ -24,7 +24,7 @@ class Bootstrap(yaml.YAMLObject):
     default_env: str = 'dev'
     external_modules: list = []
     variables: dict = {}
-    __version: str = '1.0.2'
+    __version: str = '1.0.5'
     __modules_dir: str = os.path.abspath('modules')
     __src_dir: str = os.path.dirname(os.path.realpath(__file__))
     __external_modules_dir: str = __src_dir + '/modules'
@@ -80,10 +80,7 @@ class Bootstrap(yaml.YAMLObject):
         serialized = yaml.dump(self)
         return serialized
 
-    def yaml(self):
-        self.Console.log(self.__yaml())
-
-    def prepare(self):
+    def __prepare(self):
         for external_module in self.external_modules:
             module_dir = self.__get_module_dir(external_module, external=True)
             with open(module_dir + '/bs-module.yaml', 'r') as module_yaml_file:
@@ -191,6 +188,47 @@ class Bootstrap(yaml.YAMLObject):
 
         return uri
 
+    def __get_module(self, module: str | Module) -> Module:
+        if isinstance(module, Bootstrap.Module):
+            return module
+
+        for _module in self.modules:
+            if _module.name == module:
+                return _module
+
+        raise Exception('Module ' + module + ' not found.')
+
+    def __get_service_name(self, module: Module, env: str) -> str:
+        return self.name + '-' + env + '-' + module.name
+
+    def __assert_service_running(
+            self, module: Module | str,
+            env: str | None = None,
+            service: str | None = None,
+            remote: bool = False
+    ):
+        module = self.__get_module(module)
+        env = env or self.default_env
+
+        res = self.exec(module=module, service=service, env=env, command="/bin/sh -c 'echo OK'", remote=remote)
+        if res.returncode != 0:
+            Bootstrap.Console.log(service.upper() + ' is not running.', Bootstrap.Console.WARNING)
+            answer = input('Run ' + module.name.upper() + ' to continue? (y|yes)').lower()
+            if answer == 'yes' or answer == 'y':
+                self.up_module(module=module, env=env, remote=remote)
+
+    # region Public methods
+    def up(self, env: str | None = None, rebuild: bool | str = False, remote: bool | str = False):
+        rebuild = True if rebuild == 'true' or rebuild else False
+        remote = True if remote == 'true' or remote else False
+        env = env or self.default_env
+        for module in self.modules:
+            self.up_module(module=module, rebuild=rebuild, remote=remote, env=env)
+
+    def down(self, env: str | None = None, remote: bool | str = False):
+        for module in self.modules:
+            self.down_module(module=module, env=env, remote=remote)
+
     def up_module(
             self,
             module: Module | str,
@@ -233,16 +271,6 @@ class Bootstrap(yaml.YAMLObject):
                 auto_scripts=True
             )
 
-    def __get_module(self, module: str | Module) -> Module:
-        if isinstance(module, Bootstrap.Module):
-            return module
-
-        for _module in self.modules:
-            if _module.name == module:
-                return _module
-
-        raise Exception('Module ' + module + ' not found.')
-
     def exec_module_commands(self, module: Module | str, on: str, remote: bool, env: str, auto_scripts: bool = True):
         module = self.__get_module(module)
         for command in module.commands:
@@ -272,7 +300,7 @@ class Bootstrap(yaml.YAMLObject):
                     must_exec = True
 
             if must_exec:
-                self.assert_service_running(
+                self.__assert_service_running(
                     module=command.module or module,
                     env=env,
                     service=command.service,
@@ -287,36 +315,6 @@ class Bootstrap(yaml.YAMLObject):
                 )
                 if auto_scripts:
                     self.exec_module_commands(command.module or module, 'after-command-exec', remote, env, False)
-
-    def up(self, env: str | None = None, rebuild: bool | str = False, remote: bool | str = False):
-        rebuild = True if rebuild == 'true' or rebuild else False
-        remote = True if remote == 'true' or remote else False
-        env = env or self.default_env
-        for module in self.modules:
-            self.up_module(module=module, rebuild=rebuild, remote=remote, env=env)
-
-    def down(self, env: str | None = None, remote: bool | str = False):
-        for module in self.modules:
-            self.down_module(module=module, env=env, remote=remote)
-
-    def __get_service_name(self, module: Module, env: str) -> str:
-        return self.name + '-' + env + '-' + module.name
-
-    def assert_service_running(
-            self, module: Module | str,
-            env: str | None = None,
-            service: str | None = None,
-            remote: bool = False
-    ):
-        module = self.__get_module(module)
-        env = env or self.default_env
-
-        res = self.exec(module=module, service=service, env=env, command="/bin/sh -c 'echo OK'", remote=remote)
-        if res.returncode != 0:
-            Bootstrap.Console.log(service.upper() + ' is not running.', Bootstrap.Console.WARNING)
-            answer = input('Run ' + module.name.upper() + ' to continue? (y|yes)').lower()
-            if answer == 'yes' or answer == 'y':
-                self.up_module(module=module, env=env, remote=remote)
 
     def exec(self, module: Module | str, service: str, command: str, env: str | None = None, remote: bool = False):
         env = env or self.default_env
@@ -341,43 +339,16 @@ class Bootstrap(yaml.YAMLObject):
         return subprocess.run(_command, env=variables)
 
     @staticmethod
-    def version():
-        Bootstrap.Console.log('Diazoxide Bootstrap', Bootstrap.Console.OKCYAN)
-        Bootstrap.Console.log('Version: ' + Bootstrap.__version, Bootstrap.Console.OKGREEN)
-
-    @staticmethod
-    def branding():
-        with open(Bootstrap.__src_dir + '/branding', 'r') as branding_txt:
-            Bootstrap.Console.log(branding_txt.read(), Bootstrap.Console.WARNING)
-
-    @staticmethod
     def init_from_yaml(yaml_name: str = 'bs.yaml'):
+        Bootstrap.__branding()
         with open(Bootstrap.__bootstrap_project_dir + '/' + yaml_name, 'r') as yaml_file:
             data = yaml_file.read()
         _bs = yaml.safe_load(data)
         if isinstance(_bs, Bootstrap):
-            _bs.prepare()
+            _bs.__prepare()
             return _bs
 
         raise Exception('Invalid Bootstrap bs.yaml file')
-
-    @staticmethod
-    def help():
-        method_list = [
-            func for func in dir(Bootstrap)
-            if callable(getattr(Bootstrap, func)) and not
-            func.startswith("_") and not inspect.isclass(getattr(Bootstrap, func))
-        ]
-
-        Bootstrap.Console.log('Bootstrap methods\r\n')
-
-        for bs_method in method_list:
-            signature = inspect.signature(getattr(Bootstrap, bs_method))
-            parameters = [a for a in signature.parameters if a != 'self']
-            log = "    " + Bootstrap.Console.t(bs_method, Bootstrap.Console.OKGREEN) \
-                  + ": " \
-                  + Bootstrap.Console.t(' '.join(parameters), Bootstrap.Console.BOLD)
-            Bootstrap.Console.log(log)
 
     @staticmethod
     def setup():
@@ -396,8 +367,45 @@ class Bootstrap(yaml.YAMLObject):
         f.write(_bs.__yaml())
         f.close()
 
+    @staticmethod
+    def help():
+        method_list = [
+            func for func in dir(Bootstrap)
+            if callable(getattr(Bootstrap, func)) and not
+            func.startswith("_") and not inspect.isclass(getattr(Bootstrap, func))
+        ]
 
-Bootstrap.branding()
+        Bootstrap.Console.log('Bootstrap methods')
+
+        for bs_method in method_list:
+            signature = inspect.signature(getattr(Bootstrap, bs_method))
+            parameters = [a for a in signature.parameters if a != 'self']
+            log = "    " + Bootstrap.Console.t(bs_method, Bootstrap.Console.OKGREEN) \
+                  + ": " \
+                  + Bootstrap.Console.t(' '.join(parameters), Bootstrap.Console.BOLD)
+            Bootstrap.Console.log(log)
+
+    @staticmethod
+    def version():
+        Bootstrap.Console.log('Diazoxide Bootstrap', Bootstrap.Console.OKCYAN)
+        Bootstrap.Console.log('Version: ' + Bootstrap.__version, Bootstrap.Console.OKGREEN)
+
+    @staticmethod
+    def update():
+        subprocess.run([
+            'sudo',
+            '/bin/sh',
+            '-c',
+            '"$(curl -fsSL https://raw.githubusercontent.com/diazoxide/bootstrap/HEAD/install.sh)"'
+        ])
+    # endregion Public methods
+
+    @staticmethod
+    def __branding():
+        with open(Bootstrap.__src_dir + '/branding', 'r') as branding_txt:
+            Bootstrap.Console.log(branding_txt.read(), Bootstrap.Console.WARNING)
+
+
 try:
     bs = Bootstrap.init_from_yaml()
 except Exception:
