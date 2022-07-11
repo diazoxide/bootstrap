@@ -11,6 +11,6 @@ cd "$INSTALL_DIR" \
 && python3 -m pip install --upgrade pip \
 && pip3 install -r requirements.txt \
 && chmod +x "${INSTALL_DIR}/bs.sh" \
-&& rm /usr/local/bin/bs || true \
+&& test "/usr/local/bin/bs" && rm /usr/local/bin/bs \
 && ln -s "${INSTALL_DIR}/bs.sh" /usr/local/bin/bs \
 && echo "\033[92m --- Successfully done. Run 'bs help' to start. --- \033[0m"
