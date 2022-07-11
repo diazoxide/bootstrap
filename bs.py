@@ -205,6 +205,7 @@ class Bootstrap(yaml.YAMLObject):
             module: Module | str,
             env: str | None = None,
             rebuild: bool | str = False,
+            repo_branch: str | None = None
     ):
         rebuild = True if rebuild == 'true' or rebuild else False
 
@@ -223,12 +224,11 @@ class Bootstrap(yaml.YAMLObject):
             Bootstrap.Console.log('Module repo not defined', Bootstrap.Console.FAIL)
             return
 
-        repo_branch = None
         if isinstance(module.repo, str):
             repo_src = module.repo
         else:
             repo_src = module.repo.get('src')
-            repo_branch = module.repo.get('branch', repo_branch)
+            repo_branch = module.repo.get('branch', repo_branch) if repo_branch is None else repo_branch
 
         check_first_clone_proc = subprocess.run(['git', 'rev-parse', '--is-inside-work-tree'], capture_output=True)
         if check_first_clone_proc.returncode != 0:
