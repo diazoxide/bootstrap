@@ -12,5 +12,5 @@ cd "$INSTALL_DIR" \
 && pip3 install -r requirements.txt \
 && chmod +x "${INSTALL_DIR}/bs.sh" \
 && test -f "$BIN_DIR/bs" && rm "$BIN_DIR/bs" \
-&& ln -s "${INSTALL_DIR}/bs.sh" /usr/local/bin/bs \
+|| ln -s "${INSTALL_DIR}/bs.sh" /usr/local/bin/bs \
 && echo "\033[92m --- Successfully done. Run 'bs help' to start. --- \033[0m"
