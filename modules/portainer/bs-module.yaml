@@ -1,6 +1,0 @@
-!Module
-commands: [ ]
-docker_compose_file: dockercompose.yml
-external: true
-name: portainer
-root_directory_name: portainer

@@ -6,6 +6,7 @@ import shlex
 import subprocess
 import sys
 import yaml
+from pathlib import Path
 
 
 class Bootstrap(yaml.YAMLObject):
@@ -13,21 +14,17 @@ class Bootstrap(yaml.YAMLObject):
     yaml_tag = u'!Bootstrap'
 
     name: str
+
     root_dir: str | dict = '~/bs-project'
     ssh_keys_dir: str | dict | None = '~/.ssh'
 
-    remote_root_dir: str = root_dir
-    remote_server_uri: str | dict | None = None
-    remote_ssh_keys_dir: str | dict | None = '/root/.ssh'
-
     modules: list = []
     default_env: str = 'dev'
-    external_modules: list = []
+
     variables: dict = {}
-    __version: str = '1.1.2'
+    __version: str = '2.0.2'
     __modules_dir: str = os.path.abspath('modules')
     __src_dir: str = os.path.dirname(os.path.realpath(__file__))
-    __external_modules_dir: str = __src_dir + '/modules'
     __bootstrap_project_dir: str = os.getcwd()
 
     class Console:
@@ -53,17 +50,13 @@ class Bootstrap(yaml.YAMLObject):
         yaml_loader = yaml.SafeLoader
         yaml_tag = u'!Module'
         name: str
+        repo: str | None | dict = None
 
         root_dir: str | dict | None = None
         ssh_keys_dir: str | dict | None = None
 
-        remote_root_dir: str | None = root_dir
-        remote_server_uri: str | dict | None = None
-        remote_ssh_keys_dir: str | dict | None = None
-
         root_dir_name: str | None = None
         docker_compose_file: str = 'dockercompose.yml'
-        external: bool = False
         commands: list = []
         variables: dict = {}
 
@@ -81,53 +74,39 @@ class Bootstrap(yaml.YAMLObject):
         return serialized
 
     def __prepare(self):
-        for external_module in self.external_modules:
-            module_dir = self.__get_module_dir(external_module, external=True)
-            with open(module_dir + '/bs-module.yaml', 'r') as module_yaml_file:
-                module_yaml = module_yaml_file.read()
-            module = yaml.safe_load(module_yaml)
-            self.modules.insert(
-                0,
-                module
-            )
+        a = 1
+        # for external_module in self.external_modules:
+        #     module_dir = self.__get_module_dir(external_module, external=True)
+        #     with open(module_dir + '/bs-module.yaml', 'r') as module_yaml_file:
+        #         module_yaml = module_yaml_file.read()
+        #     module = yaml.safe_load(module_yaml)
+        #     self.modules.insert(
+        #         0,
+        #         module
+        #     )
 
-    def __get_module_root_dir(self, module: Module | str, env: str, remote: bool) -> str:
+    def __get_module_root_dir(self, module: Module | str, env: str) -> str:
         module = self.__get_module(module)
-        root_dir = self.__get_root_dir(module=module, env=env, remote=remote)
+        root_dir = self.__get_root_dir(module=module, env=env)
+        return root_dir + '/' \
+               + (module.root_dir_name or module.name)
 
-        return \
-            root_dir + '/' \
-            + env + '/' \
-            + (module.root_dir_name or module.name)
-
-    def __get_module_dir(self, module: Module | str, external: bool = False) -> str:
-        module_name = module.name if isinstance(module, Bootstrap.Module) else module
-        if external or isinstance(module, Bootstrap.Module) and module.external:
-            return self.__external_modules_dir + '/' + module_name
-        return self.__modules_dir + '/' + module_name
-
-    def __get_module_ssh_keys_dir(self, module: Module | str, env: str, remote: bool) -> str:
-        if remote:
-            keys_dir = module.remote_ssh_keys_dir \
-                if module.remote_ssh_keys_dir is not None \
-                else self.remote_ssh_keys_dir
-        else:
-            keys_dir = module.ssh_keys_dir if module.ssh_keys_dir is not None else self.ssh_keys_dir
+    def __get_module_ssh_keys_dir(self, module: Module | str, env: str) -> str:
+        keys_dir = module.ssh_keys_dir if module.ssh_keys_dir is not None else self.ssh_keys_dir
         return self.__get_property_for_env(keys_dir, env)
 
-    def __get_root_dir(self, module: Module | str, env: str, remote: bool) -> str:
-        if remote:
-            keys_dir = module.remote_root_dir if module.remote_root_dir is not None else self.remote_root_dir
-        else:
-            keys_dir = module.root_dir if module.root_dir is not None else self.root_dir
-        return self.__get_property_for_env(keys_dir, env)
+    def __get_root_dir(self, module: Module | str, env: str) -> str:
+        keys_dir = module.root_dir if module.root_dir is not None else self.root_dir
+        p = self.__get_property_for_env(keys_dir, env)
+        p = os.path.expanduser(p)
+        return p
 
-    def __get_module_env_variables(self, module: Module | str, env: str, remote: bool) -> dict:
+    def __get_module_env_variables(self, module: Module | str, env: str) -> dict:
         module = self.__get_module(module)
 
         variables = os.environ.copy()
-        variables['BS_ROOT_DIR'] = self.__get_module_root_dir(module=module, env=env, remote=remote)
-        variables['BS_SSH_KEYS_DIR'] = self.__get_module_ssh_keys_dir(module=module, env=env, remote=remote)
+        variables['BS_ROOT_DIR'] = self.__get_module_root_dir(module=module, env=env)
+        variables['BS_SSH_KEYS_DIR'] = self.__get_module_ssh_keys_dir(module=module, env=env)
         variables['BS_ENV'] = env
         for _module in self.modules:
             variables['BS_' + _module.name.upper().replace('-', '_') + "_MODULE"] = self.__get_service_name(
@@ -152,17 +131,14 @@ class Bootstrap(yaml.YAMLObject):
     def __get_stack_name(self, module: Module, env: str) -> str:
         return '{0}-{1}-{2}'.format(self.name, env, module.name)
 
-    def down_module(self, module: Module | str, env: str | None = None, remote: bool = False):
+    def down_module(self, module: Module | str, env: str | None = None):
         module = self.__get_module(module)
         env = env or self.default_env
-        variables = self.__get_module_env_variables(module=module, env=env, remote=remote)
-        os.chdir(self.__get_module_dir(module))
+        variables = self.__get_module_env_variables(module=module, env=env)
+        os.chdir(self.__get_module_root_dir(module=module, env=env))
         command = [
             'docker-compose',
         ]
-
-        if remote:
-            command += ['-H', self.__get_module_remote_server_uri(module, env)]
 
         command += [
             '-p',
@@ -177,16 +153,6 @@ class Bootstrap(yaml.YAMLObject):
         if type(var) is dict:
             return var[env] if env in var else None
         return var
-
-    def __get_module_remote_server_uri(self, module: Module, env: str):
-        uri = module.remote_server_uri if module.remote_server_uri is not None else self.remote_server_uri
-
-        uri = self.__get_property_for_env(uri, env)
-
-        if uri is None:
-            raise Exception('Remote server uri is required')
-
-        return uri
 
     def __get_module(self, module: str | Module) -> Module:
         if isinstance(module, Bootstrap.Module):
@@ -204,52 +170,80 @@ class Bootstrap(yaml.YAMLObject):
     def __assert_service_running(
             self, module: Module | str,
             env: str | None = None,
-            service: str | None = None,
-            remote: bool = False
+            service: str | None = None
     ):
         module = self.__get_module(module)
         env = env or self.default_env
 
-        res = self.exec(module=module, service=service, env=env, command="/bin/sh -c 'echo OK'", remote=remote)
+        res = self.exec(module=module, service=service, env=env, command="/bin/sh -c 'echo OK'")
         if res.returncode != 0:
             Bootstrap.Console.log(service.upper() + ' is not running.', Bootstrap.Console.WARNING)
             answer = input('Run ' + module.name.upper() + ' to continue? (y|yes)').lower()
             if answer == 'yes' or answer == 'y':
-                self.up_module(module=module, env=env, remote=remote)
+                self.up_module(module=module, env=env)
 
     # region Public methods
-    def up(self, env: str | None = None, rebuild: bool | str = False, remote: bool | str = False):
+    def up(
+            self,
+            env: str | None = None,
+            rebuild: bool | str = False,
+    ):
         rebuild = True if rebuild == 'true' or rebuild else False
-        remote = True if remote == 'true' or remote else False
         env = env or self.default_env
         for module in self.modules:
-            self.up_module(module=module, rebuild=rebuild, remote=remote, env=env)
+            self.up_module(module=module, rebuild=rebuild, env=env)
 
-    def down(self, env: str | None = None, remote: bool | str = False):
+    def down(
+            self,
+            env: str | None = None,
+    ):
         for module in self.modules:
-            self.down_module(module=module, env=env, remote=remote)
+            self.down_module(module=module, env=env)
 
     def up_module(
             self,
             module: Module | str,
             env: str | None = None,
             rebuild: bool | str = False,
-            remote: bool | str = False
     ):
         rebuild = True if rebuild == 'true' or rebuild else False
-        remote = True if remote == 'true' or remote else False
 
         module = self.__get_module(module)
         env = env or self.default_env
-        variables = self.__get_module_env_variables(module=module, env=env, remote=remote)
+        variables = self.__get_module_env_variables(module=module, env=env)
+        module_root_dir = self.__get_module_root_dir(module=module, env=env)
 
-        os.chdir(self.__get_module_dir(module))
-        command = ['docker-compose']
+        Bootstrap.Console.log('Module directory: ' + module_root_dir)
 
-        if remote:
-            command += ['-H', self.__get_module_remote_server_uri(module, env)]
+        Path(module_root_dir).mkdir(parents=True, exist_ok=True)
 
-        command += [
+        os.chdir(module_root_dir)
+
+        if not module.repo:
+            Bootstrap.Console.log('Module repo not defined', Bootstrap.Console.FAIL)
+            return
+
+        repo_branch = None
+        if isinstance(module.repo, str):
+            repo_src = module.repo
+        else:
+            repo_src = module.repo.get('src')
+            repo_branch = module.repo.get('branch', repo_branch)
+
+        check_first_clone_proc = subprocess.run(['git', 'rev-parse', '--is-inside-work-tree'], capture_output=True)
+        if check_first_clone_proc.returncode != 0:
+            pull_command_proc = subprocess.run(['git', 'clone', repo_src, '.'])
+            if pull_command_proc.returncode != 0:
+                Bootstrap.Console.log("Failed cloning from remote git repository!", Bootstrap.Console.WARNING)
+                return
+
+        if repo_branch:
+            checkout_proc = subprocess.run(['git', 'checkout', repo_branch])
+            if checkout_proc.returncode != 0:
+                Bootstrap.Console.log("Checkout failed!", Bootstrap.Console.WARNING)
+
+        command = [
+            'docker-compose',
             '-p',
             self.__get_stack_name(module, env),
             'up', '-d', '--force-recreate', '--wait', '--remove-orphans'
@@ -266,22 +260,26 @@ class Bootstrap(yaml.YAMLObject):
             self.exec_module_commands(
                 module,
                 on='up',
-                remote=remote,
                 env=env,
                 auto_scripts=True
             )
 
-    def exec_module_commands(self, module: Module | str, on: str, remote: bool, env: str, auto_scripts: bool = True):
+    def exec_module_commands(
+            self,
+            module: Module | str,
+            on: str,
+            env: str,
+            auto_scripts: bool = True,
+    ):
         module = self.__get_module(module)
         for command in module.commands:
             if command.on == on:
-                self.exec_module_command(module, command, remote, env, auto_scripts)
+                self.exec_module_command(module=module, command=command, env=env, auto_scripts=auto_scripts)
 
     def exec_module_command(
             self,
             module: Module | str,
             command: Module.Command,
-            remote: bool = False,
             env: str | None = None,
             auto_scripts: bool = True
     ):
@@ -289,47 +287,34 @@ class Bootstrap(yaml.YAMLObject):
         command_list = [command.command] if isinstance(command.command, str) else command.command
 
         for single_command in command_list:
-            must_exec = False
-            condition = [command.condition] if isinstance(command.condition, str) else command.condition
-            if not condition:
-                must_exec = True
-            else:
-                if remote and "remote" in condition:
-                    must_exec = True
-                if not remote and "not:remote" in condition:
-                    must_exec = True
-
-            if must_exec:
-                self.__assert_service_running(
+            self.__assert_service_running(
+                module=command.module or module,
+                env=env,
+                service=command.service
+            )
+            self.exec(
+                module=command.module or module,
+                service=command.service,
+                command=single_command,
+                env=env
+            )
+            if auto_scripts:
+                self.exec_module_commands(
                     module=command.module or module,
+                    on='after-command-exec',
                     env=env,
-                    service=command.service,
-                    remote=remote
+                    auto_scripts=False
                 )
-                self.exec(
-                    module=command.module or module,
-                    service=command.service,
-                    command=single_command,
-                    env=env,
-                    remote=remote
-                )
-                if auto_scripts:
-                    self.exec_module_commands(command.module or module, 'after-command-exec', remote, env, False)
 
-    def exec(self, module: Module | str, service: str, command: str, env: str | None = None, remote: bool = False):
+    def exec(self, module: Module | str, service: str, command: str, env: str | None = None):
         env = env or self.default_env
         module = self.__get_module(module)
-        os.chdir(self.__get_module_dir(module))
-        variables = self.__get_module_env_variables(module=module, env=env, remote=remote)
-        remote_param = ''
-
-        if remote:
-            remote_param = '-H ' + self.__get_module_remote_server_uri(module, env)
+        os.chdir(self.__get_module_root_dir(module=module, env=env))
+        variables = self.__get_module_env_variables(module=module, env=env)
 
         _command_str = (
-            'docker-compose -p{0} {1} exec {2} {3}'.format(
+            'docker-compose -p{0} exec {1} {2}'.format(
                 self.__get_stack_name(module, env),
-                remote_param,
                 service,
                 command
             )
@@ -361,7 +346,6 @@ class Bootstrap(yaml.YAMLObject):
         default_root_dir = '~/' + _bs.name
         _bs.root_dir = input("Root dir(" + default_root_dir + "):") or default_root_dir
         _bs.modules = []
-        _bs.external_modules = []
 
         f = open("./bs.yaml", "w")
         f.write(_bs.__yaml())
@@ -405,8 +389,8 @@ class Bootstrap(yaml.YAMLObject):
             Bootstrap.Console.log("Permission denied. Run update command with super user.")
         else:
             Bootstrap.Console.log("Update failed.")
-    # endregion Public methods
 
+    # endregion Public methods
     @staticmethod
     def __branding():
         with open(Bootstrap.__src_dir + '/branding', 'r') as branding_txt:
