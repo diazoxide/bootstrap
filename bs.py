@@ -73,18 +73,6 @@ class Bootstrap(yaml.YAMLObject):
         serialized = yaml.dump(self)
         return serialized
 
-    def __prepare(self):
-        a = 1
-        # for external_module in self.external_modules:
-        #     module_dir = self.__get_module_dir(external_module, external=True)
-        #     with open(module_dir + '/bs-module.yaml', 'r') as module_yaml_file:
-        #         module_yaml = module_yaml_file.read()
-        #     module = yaml.safe_load(module_yaml)
-        #     self.modules.insert(
-        #         0,
-        #         module
-        #     )
-
     def __get_module_root_dir(self, module: Module | str, env: str) -> str:
         module = self.__get_module(module)
         root_dir = self.__get_root_dir(module=module, env=env)
@@ -330,7 +318,6 @@ class Bootstrap(yaml.YAMLObject):
             data = yaml_file.read()
         _bs = yaml.safe_load(data)
         if isinstance(_bs, Bootstrap):
-            _bs.__prepare()
             return _bs
 
         raise Exception('Invalid Bootstrap bs.yaml file')
