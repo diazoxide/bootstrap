@@ -22,7 +22,7 @@ class Bootstrap(yaml.YAMLObject):
     default_env: str = 'dev'
 
     variables: dict = {}
-    __version: str = '2.0.4'
+    __version: str = '2.0.5'
     __modules_dir: str = os.path.abspath('modules')
     __src_dir: str = os.path.dirname(os.path.realpath(__file__))
     __bootstrap_project_dir: str = os.environ.get('BS_PROJECT_FILE', os.getcwd())
@@ -324,7 +324,7 @@ class Bootstrap(yaml.YAMLObject):
         file_name = Bootstrap.__bootstrap_project_dir + '/' + yaml_name
 
         if not os.path.isfile(file_name):
-            Bootstrap.Console.log('Bootstrap bs.yaml file not found', Bootstrap.Console.FAIL)
+            raise Exception('Bootstrap bs.yaml file not found')
 
         with open(Bootstrap.__bootstrap_project_dir + '/' + yaml_name, 'r') as yaml_file:
             data = yaml_file.read()
@@ -332,7 +332,7 @@ class Bootstrap(yaml.YAMLObject):
         if isinstance(_bs, Bootstrap):
             return _bs
         else:
-            Bootstrap.Console.log('Invalid Bootstrap bs.yaml file', Bootstrap.Console.FAIL)
+            raise Exception('Invalid Bootstrap bs.yaml file')
 
     @staticmethod
     def setup():
@@ -376,7 +376,7 @@ class Bootstrap(yaml.YAMLObject):
     @staticmethod
     def update():
         result = subprocess.run([
-            '/bin/sh',
+            'sh',
             '-c',
             'eval "$(curl -fsSL https://raw.githubusercontent.com/diazoxide/bootstrap/HEAD/install.sh)"'
         ], capture_output=True)
@@ -398,7 +398,8 @@ class Bootstrap(yaml.YAMLObject):
 
 try:
     bs = Bootstrap.init_from_yaml()
-except Exception:
+except Exception as e:
+    Bootstrap.Console.log(str(e))
     bs = Bootstrap
 
 method = sys.argv[1] if 1 < len(sys.argv) else 'help'
