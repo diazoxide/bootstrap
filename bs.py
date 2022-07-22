@@ -22,10 +22,10 @@ class Bootstrap(yaml.YAMLObject):
     default_env: str = 'dev'
 
     variables: dict = {}
-    __version: str = '2.0.6'
+    __version: str = '2.0.10'
     __modules_dir: str = os.path.abspath('modules')
     __src_dir: str = os.path.dirname(os.path.realpath(__file__))
-    __bootstrap_project_dir: str = os.environ.get('BS_PROJECT_FILE', os.getcwd())
+    __bootstrap_project_dir: str = os.path.expanduser(os.environ.get('BS_PROJECT_DIR', os.getcwd()))
 
     class Console:
         HEADER = '\033[95m'
@@ -324,9 +324,9 @@ class Bootstrap(yaml.YAMLObject):
         file_name = Bootstrap.__bootstrap_project_dir + '/' + yaml_name
 
         if not os.path.isfile(file_name):
-            raise Exception('Bootstrap bs.yaml file not found')
+            raise Exception('Bootstrap bs.yaml file ' + file_name + ' not found')
 
-        with open(Bootstrap.__bootstrap_project_dir + '/' + yaml_name, 'r') as yaml_file:
+        with open(file_name, 'r') as yaml_file:
             data = yaml_file.read()
         _bs = yaml.safe_load(data)
         if isinstance(_bs, Bootstrap):
