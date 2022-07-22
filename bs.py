@@ -22,7 +22,7 @@ class Bootstrap(yaml.YAMLObject):
     default_env: str = 'dev'
 
     variables: dict = {}
-    __version: str = '2.0.5'
+    __version: str = '2.0.6'
     __modules_dir: str = os.path.abspath('modules')
     __src_dir: str = os.path.dirname(os.path.realpath(__file__))
     __bootstrap_project_dir: str = os.environ.get('BS_PROJECT_FILE', os.getcwd())
